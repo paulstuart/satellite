@@ -1,11 +1,13 @@
 package providers
 
 import (
+	"io"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/banzaicloud/satellite/defaults"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
-	"net/http"
-	"strings"
 )
 
 //Used docs
@@ -18,7 +20,7 @@ type IdentifyAlibaba struct {
 
 // Identify tries to identify Alibaba provider by reading the /sys/class/dmi/id/product_name file
 func (a *IdentifyAlibaba) Identify() (string, error) {
-	data, err := ioutil.ReadFile("/sys/class/dmi/id/product_name")
+	data, err := os.ReadFile("/sys/class/dmi/id/product_name")
 	if err != nil {
 		a.Log.Errorf("Something happened during reading a file: %s", err.Error())
 		return defaults.Unknown, err
@@ -45,7 +47,7 @@ func IdentifyAlibabaViaMetadataServer(detected chan<- string, log logrus.FieldLo
 	}
 	if resp.StatusCode == http.StatusOK {
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			log.Errorf("Something happened during parsing the response body %s", err.Error())
 			detected <- defaults.Unknown

@@ -2,8 +2,9 @@ package providers
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/banzaicloud/satellite/defaults"
@@ -24,7 +25,7 @@ type IdentifyOracle struct {
 
 // Identify tries to identify Oracle provider by reading the /sys/class/dmi/id/chassis_asset_tag file
 func (a *IdentifyOracle) Identify() (string, error) {
-	data, err := ioutil.ReadFile("/sys/class/dmi/id/chassis_asset_tag")
+	data, err := os.ReadFile("/sys/class/dmi/id/chassis_asset_tag")
 	if err != nil {
 		a.Log.Errorf("Something happened during reading a file: %s", err.Error())
 		return defaults.Unknown, err
@@ -52,7 +53,7 @@ func IdentifyOracleViaMetadataServer(detected chan<- string, log logrus.FieldLog
 	}
 	if resp.StatusCode == http.StatusOK {
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			log.Errorf("Something happened during parsing the response body %s", err.Error())
 			detected <- defaults.Unknown

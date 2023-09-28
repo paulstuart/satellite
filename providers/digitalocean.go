@@ -2,8 +2,9 @@ package providers
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/banzaicloud/satellite/defaults"
@@ -24,7 +25,7 @@ type IdentifyDigitalOcean struct {
 
 // Identify tries to identify DigitalOcean provider by reading the /sys/class/dmi/id/sys_vendor file
 func (a *IdentifyDigitalOcean) Identify() (string, error) {
-	data, err := ioutil.ReadFile("/sys/class/dmi/id/sys_vendor")
+	data, err := os.ReadFile("/sys/class/dmi/id/sys_vendor")
 	if err != nil {
 		a.Log.Errorf("Something happened during reading a file: %s", err.Error())
 		return defaults.Unknown, err
@@ -52,7 +53,7 @@ func IdentifyDigitalOceanViaMetadataServer(detected chan<- string, log logrus.Fi
 	}
 	if resp.StatusCode == http.StatusOK {
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			log.Errorf("Something happened during parsing the response body %s", err.Error())
 			detected <- defaults.Unknown

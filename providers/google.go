@@ -1,11 +1,12 @@
 package providers
 
 import (
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/banzaicloud/satellite/defaults"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
-	"net/http"
-	"strings"
 )
 
 //Used Doc
@@ -18,7 +19,7 @@ type IdentifyGoogle struct {
 
 // Identify tries to identify Google provider by reading the /sys/class/dmi/id/product_name file
 func (a *IdentifyGoogle) Identify() (string, error) {
-	data, err := ioutil.ReadFile("/sys/class/dmi/id/product_name")
+	data, err := os.ReadFile("/sys/class/dmi/id/product_name")
 	if err != nil {
 		a.Log.Errorf("Something happened during reading a file: %s", err.Error())
 		return defaults.Unknown, err

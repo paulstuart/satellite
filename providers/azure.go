@@ -1,11 +1,12 @@
 package providers
 
 import (
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/banzaicloud/satellite/defaults"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
-	"net/http"
-	"strings"
 )
 
 //Used docs
@@ -18,7 +19,7 @@ type IdentifyAzure struct {
 
 // Identify tries to identify Azure provider by reading the /sys/class/dmi/id/sys_vendor file
 func (a *IdentifyAzure) Identify() (string, error) {
-	data, err := ioutil.ReadFile("/sys/class/dmi/id/sys_vendor")
+	data, err := os.ReadFile("/sys/class/dmi/id/sys_vendor")
 	if err != nil {
 		a.Log.Errorf("Something happened during reading a file: %s", err.Error())
 		return defaults.Unknown, err
