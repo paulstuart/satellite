@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/paulstuart/satellite/csp"
@@ -17,22 +16,21 @@ const (
 )
 
 // Identify tries to identify Azure provider by reading the /sys/class/dmi/id/sys_vendor file
-func IdentifyAsure() (string, error) {
-	if fileContains(AzureFile, AzureContents) {
-		return csp.Azure, nil
-	}
-	return "", nil
+func IdentifyAzure() string {
+	return fileContains(AzureFile, csp.Azure, AzureContents)
 }
 
 // IdentifyAzureViaMetadataServer tries to identify Azure via metadata server
-func IdentifyAzureViaMetadataServer() (string, error) {
+func IdentifyAzureViaMetadataServer() string {
 	headers := map[string]string{"Metadata": "true"}
 	resp, err := httpGet(AzureURL, headers)
 	if err != nil {
-		return "", fmt.Errorf("something happened during the request %w", err)
+		Logger.Printf("something happened during the request %v", err)
+		return ""
 	}
 	if resp.StatusCode == http.StatusOK {
-		return csp.Azure, nil
+		return csp.Azure
 	}
-	return "", fmt.Errorf("something happened during the request with status %s", resp.Status)
+	Logger.Printf("something happened during the request with status %s", resp.Status)
+	return ""
 }

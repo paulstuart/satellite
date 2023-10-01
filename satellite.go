@@ -1,22 +1,24 @@
 package satellite
 
 import (
-	"log"
 	"sync"
 
 	"github.com/paulstuart/satellite/providers"
 )
 
-type determiner func() (string, error)
+// NOTE: we don't really care about errors, as they're expected for all but our own CSP
+// and the first non-empty string response wins
+
+type determiner func() string
 
 func pickOne(checker ...determiner) string {
 	var csp string
-	var mu sync.Mutex
+	var mu sync.Mutex // perhaps overkill as we only should get a single response
 	var wg sync.WaitGroup
 	wg.Add(len(checker))
 	for _, fn := range checker {
 		go func(fx determiner) {
-			if s, err := fx(); err == nil && s != "" {
+			if s := fx(); s != "" {
 				mu.Lock()
 				csp = s
 				mu.Unlock()
@@ -32,7 +34,7 @@ func DetermineCSP() string {
 	checker := []determiner{
 		providers.IdentifyAlibaba,
 		providers.IdentifyAmazon,
-		providers.IdentifyAsure,
+		providers.IdentifyAzure,
 		providers.IdentifyDigitalOcean,
 		providers.IdentifyGoogle,
 		providers.IdentifyOracle,
@@ -40,7 +42,7 @@ func DetermineCSP() string {
 	if csp := pickOne(checker...); csp != "" {
 		return csp
 	}
-	log.Printf("no local CSP identifiers found")
+	providers.Logger.Printf("no local CSP identifiers found")
 	checker = []determiner{
 		providers.IdentifyAlibabaViaMetadataServer,
 		providers.IdentifyAmazonViaMetadataServer,

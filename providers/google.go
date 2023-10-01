@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/paulstuart/satellite/csp"
@@ -17,23 +16,22 @@ const (
 )
 
 // Identify tries to identify Google provider by reading the /sys/class/dmi/id/product_name file
-func IdentifyGoogle() (string, error) {
-	if fileContains(GoogleFile, GoogleContents) {
-		return csp.Google, nil
-	}
-	return "", nil
+func IdentifyGoogle() string {
+	return fileContains(GoogleFile, csp.Google, GoogleContents)
 }
 
 // IdentifyGoogleViaMetadataServer tries to identify Google via metadata server
-func IdentifyGoogleViaMetadataServer() (string, error) {
+func IdentifyGoogleViaMetadataServer() string {
 	headers := map[string]string{"Metadata-Flavor": "Google"}
 	resp, err := httpGet(GoogleURL, headers)
 
 	if err != nil {
-		return "", fmt.Errorf("something happened during the request %w", err)
+		Logger.Printf("something happened during the request %v", err)
+		return ""
 	}
 	if resp.StatusCode == http.StatusOK {
-		return csp.Google, nil
+		return csp.Google
 	}
-	return "", fmt.Errorf("something happened during the request with status %s", resp.Status)
+	Logger.Printf("something happened during the request with status %s", resp.Status)
+	return ""
 }

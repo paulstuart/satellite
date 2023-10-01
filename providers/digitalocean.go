@@ -23,15 +23,12 @@ func (do *digitalOceanMetadataResponse) IsCSP() string {
 }
 
 // Identify tries to identify DigitalOcean provider by reading the /sys/class/dmi/id/sys_vendor file
-func IdentifyDigitalOcean() (string, error) {
-	if fileContains(DigitalOceanFile, DigitalOceanContents) {
-		return csp.DigitalOcean, nil
-	}
-	return "", nil
+func IdentifyDigitalOcean() string {
+	return fileContains(DigitalOceanFile, csp.DigitalOcean, DigitalOceanContents)
 }
 
 // IdentifyDigitalOceanViaMetadataServer tries to identify DigitalOcean via metadata server
-func IdentifyDigitalOceanViaMetadataServer() (string, error) {
+func IdentifyDigitalOceanViaMetadataServer() string {
 	var do digitalOceanMetadataResponse
 	return IdentifyViaMetadataServer(DigitalOceanURL, &do)
 }

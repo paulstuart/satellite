@@ -27,15 +27,12 @@ func (or *oracleMetadataResponse) IsCSP() string {
 }
 
 // Identify tries to identify Oracle provider by reading the /sys/class/dmi/id/chassis_asset_tag file
-func IdentifyOracle() (string, error) {
-	if fileContains(OracleFile, OracleContents) {
-		return csp.Oracle, nil
-	}
-	return "", nil
+func IdentifyOracle() string {
+	return fileContains(OracleFile, csp.Oracle, OracleContents)
 }
 
 // IdentifyOracleViaMetadataServer tries to identify Oracle via metadata server
-func IdentifyOracleViaMetadataServer() (string, error) {
+func IdentifyOracleViaMetadataServer() string {
 	var r oracleMetadataResponse
 	return IdentifyViaMetadataServer(OracleURL, &r)
 }

@@ -1,7 +1,6 @@
 package providers
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -19,33 +18,28 @@ const (
 )
 
 // Identify tries to identify Alibaba provider by reading the /sys/class/dmi/id/product_name file
-func IdentifyAlibaba() (string, error) {
-	if fileContains(AlibabaFile, AlibabaContents) {
-		return csp.Alibaba, nil
-	}
-	return "", nil
+func IdentifyAlibaba() string {
+	return fileContains(AlibabaFile, csp.Alibaba, AlibabaContents)
 }
 
 // IdentifyAlibabaViaMetadataServer tries to identify Alibaba via metadata server
-func IdentifyAlibabaViaMetadataServer() (string, error) {
+func IdentifyAlibabaViaMetadataServer() string {
 	resp, err := httpGet(AlibabaURL, nil)
-	// req, err := http.NewRequest("GET", AlibabaURL, nil)
-	// if err != nil {
-	// 	return "", fmt.Errorf("could not create proper http request %w", err)
-	// }
-	// resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("something happened during the request %w", err)
+		Logger.Printf("something happened during the get %v", err)
+		return ""
 	}
 	if resp.StatusCode == http.StatusOK {
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return "", fmt.Errorf("something happened during parsing the response body %w", err)
+			Logger.Printf("something happened during parsing the response body %v", err)
+			return ""
 		}
 		if strings.HasPrefix(string(body), "ecs.") {
-			return csp.Alibaba, nil
+			return csp.Alibaba
 		}
 	}
-	return "", fmt.Errorf("something happened during the request with status %s", resp.Status)
+	Logger.Printf("something happened during the request with status %s", resp.Status)
+	return ""
 }

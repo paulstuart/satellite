@@ -30,15 +30,12 @@ func (r *instanceIdentityResponse) IsCSP() string {
 }
 
 // Identify tries to identify Amazon provider by reading the /sys/class/dmi/id/product_version file
-func IdentifyAmazon() (string, error) {
-	if fileContains(AmazonFile, AmazonContents) {
-		return csp.Amazon, nil
-	}
-	return "", nil
+func IdentifyAmazon() string {
+	return fileContains(AmazonFile, csp.Amazon, AmazonContents)
 }
 
 // IdentifyAmazonViaMetadataServer tries to identify Amazon via metadata server
-func IdentifyAmazonViaMetadataServer() (string, error) {
+func IdentifyAmazonViaMetadataServer() string {
 	var r instanceIdentityResponse
 	return IdentifyViaMetadataServer(AmazonURL, &r)
 }

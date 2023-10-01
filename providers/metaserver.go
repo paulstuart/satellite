@@ -18,7 +18,7 @@ type CSP interface {
 
 var (
 	Timeout = time.Second * 2
-	logger  = log.Default()
+	Logger  = log.Default()
 )
 
 func httpGet(url string, headers map[string]string) (*http.Response, error) {
@@ -37,37 +37,41 @@ func httpGet(url string, headers map[string]string) (*http.Response, error) {
 	return http.DefaultClient.Do(req)
 }
 
-func IdentifyViaMetadataServer(url string, c CSP) (string, error) {
+func IdentifyViaMetadataServer(url string, c CSP) string {
 	resp, err := httpGet(url, nil)
 	if err != nil {
-		return "", fmt.Errorf("get failed for %q: %w", url, err)
+		Logger.Printf("get failed for %q: %v", url, err)
+		return ""
 	}
 	if resp.StatusCode == http.StatusOK {
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return "", fmt.Errorf("failed parsing the response body %w", err)
+			Logger.Printf("failed parsing the response body %v", err)
+			return ""
 		}
 		err = json.Unmarshal(body, c)
 		if err != nil {
-			return "", fmt.Errorf("failed unmarshalling the response body %w", err)
+			Logger.Printf("failed unmarshalling the response body %v", err)
+			return ""
 		}
-		return c.IsCSP(), nil
+		return c.IsCSP()
 	}
-	return "", fmt.Errorf("something happened during the request with status %s", resp.Status)
+	Logger.Printf("something happened during the request with status %s", resp.Status)
+	return ""
 }
 
-func fileContains(file string, what ...string) bool {
+func fileContains(file, csp string, what ...string) string {
 	b, err := os.ReadFile(file)
 	if err != nil {
-		log.Printf("failed to read file %q -- %v", file, err)
-		return false
+		Logger.Printf("failed to read file for %s %q -- %v", csp, file, err)
+		return ""
 	}
 	data := string(b)
 	for _, item := range what {
 		if strings.Contains(data, item) {
-			return true
+			return csp
 		}
 	}
-	return false
+	return ""
 }
