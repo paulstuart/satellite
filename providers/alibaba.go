@@ -1,64 +1,52 @@
 package providers
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 
-	"github.com/banzaicloud/satellite/defaults"
-	"github.com/sirupsen/logrus"
+	"github.com/paulstuart/satellite/csp"
 )
 
 //Used docs
 //https://www.alibabacloud.com/help/faq-detail/49122.htm
 
-// IdentifyAlibaba struct holds the logger
-type IdentifyAlibaba struct {
-	Log logrus.FieldLogger
-}
-
 // Identify tries to identify Alibaba provider by reading the /sys/class/dmi/id/product_name file
-func (a *IdentifyAlibaba) Identify() (string, error) {
+func IdentifyAlibaba() (string, error) {
 	data, err := os.ReadFile("/sys/class/dmi/id/product_name")
 	if err != nil {
-		a.Log.Errorf("Something happened during reading a file: %s", err.Error())
-		return defaults.Unknown, err
+		return "", fmt.Errorf("something happened during reading a file: %s", err.Error())
 	}
 	if strings.Contains(string(data), "Alibaba Cloud") {
-		return defaults.Alibaba, nil
+		return csp.Alibaba, nil
 	}
-	return defaults.Unknown, nil
+	return "", nil
 }
 
+const AlibabaURL = "http://100.100.100.200/latest/meta-data/instance/instance-type"
+
 // IdentifyAlibabaViaMetadataServer tries to identify Alibaba via metadata server
-func IdentifyAlibabaViaMetadataServer(detected chan<- string, log logrus.FieldLogger) {
-	req, err := http.NewRequest("GET", "http://100.100.100.200/latest/meta-data/instance/instance-type", nil)
+func IdentifyAlibabaViaMetadataServer() (string, error) {
+	resp, err := httpGet(AlibabaURL, nil)
+	// req, err := http.NewRequest("GET", AlibabaURL, nil)
+	// if err != nil {
+	// 	return "", fmt.Errorf("could not create proper http request %w", err)
+	// }
+	// resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Errorf("could not create proper http request %s", err.Error())
-		detected <- defaults.Unknown
-		return
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Errorf("Something happened during the request %s", err.Error())
-		detected <- defaults.Unknown
-		return
+		return "", fmt.Errorf("something happened during the request %w", err)
 	}
 	if resp.StatusCode == http.StatusOK {
 		defer resp.Body.Close()
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Errorf("Something happened during parsing the response body %s", err.Error())
-			detected <- defaults.Unknown
-			return
+			return "", fmt.Errorf("something happened during parsing the response body %w", err)
 		}
 		if strings.HasPrefix(string(body), "ecs.") {
-			detected <- defaults.Alibaba
+			return csp.Alibaba, nil
 		}
-	} else {
-		log.Errorf("Something happened during the request with status %s", resp.Status)
-		detected <- defaults.Unknown
-		return
 	}
+	return "", fmt.Errorf("something happened during the request with status %s", resp.Status)
 }

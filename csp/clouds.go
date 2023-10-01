@@ -1,4 +1,4 @@
-package defaults
+package csp
 
 const (
 	Amazon       = "amazon"

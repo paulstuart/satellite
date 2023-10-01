@@ -1,55 +1,43 @@
 package providers
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
 
-	"github.com/banzaicloud/satellite/defaults"
-	"github.com/sirupsen/logrus"
+	"github.com/paulstuart/satellite/csp"
 )
 
 //Used docs
 // https://azure.microsoft.com/en-us/blog/announcing-general-availability-of-azure-instance-metadata-service/
 
-// IdentifyAzure struct holds the logger
-type IdentifyAzure struct {
-	Log logrus.FieldLogger
-}
+const (
+	AzureURL  = "http://169.254.169.254/metadata/instance?api-version=2017-12-01"
+	AzureFile = "/sys/class/dmi/id/sys_vendor"
+)
 
 // Identify tries to identify Azure provider by reading the /sys/class/dmi/id/sys_vendor file
-func (a *IdentifyAzure) Identify() (string, error) {
-	data, err := os.ReadFile("/sys/class/dmi/id/sys_vendor")
+func IdentifyAsure() (string, error) {
+	data, err := os.ReadFile(AzureFile)
 	if err != nil {
-		a.Log.Errorf("Something happened during reading a file: %s", err.Error())
-		return defaults.Unknown, err
+		return "", fmt.Errorf("something happened during reading a file: %w", err)
 	}
 	if strings.Contains(string(data), "Microsoft Corporation") {
-		return defaults.Azure, nil
+		return csp.Azure, nil
 	}
-	return defaults.Unknown, nil
+	return "", nil
 }
 
 // IdentifyAzureViaMetadataServer tries to identify Azure via metadata server
-func IdentifyAzureViaMetadataServer(detected chan<- string, log logrus.FieldLogger) {
-	req, err := http.NewRequest("GET", "http://169.254.169.254/metadata/instance?api-version=2017-12-01", nil)
+func IdentifyAzureViaMetadataServer() (string, error) {
+	headers := map[string]string{"Metadata": "true"}
+	resp, err := httpGet(AzureURL, headers)
 	if err != nil {
-		log.Errorf("Could not create a proper http request %s", err.Error())
-		detected <- defaults.Unknown
-		return
-	}
-	req.Header.Set("Metadata", "true")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Errorf("Something happened during the request %s", err.Error())
-		detected <- defaults.Unknown
-		return
+		return "", fmt.Errorf("something happened during the request %w", err)
 	}
 	if resp.StatusCode == http.StatusOK {
-		detected <- defaults.Azure
-	} else {
-		log.Errorf("Something happened during the request with status %s", resp.Status)
-		detected <- defaults.Unknown
-		return
+		return csp.Azure, nil
 	}
+	return "", fmt.Errorf("Something happened during the request with status %s", resp.Status)
 }

@@ -1,55 +1,39 @@
 package providers
 
 import (
+	"fmt"
 	"net/http"
-	"os"
-	"strings"
 
-	"github.com/banzaicloud/satellite/defaults"
-	"github.com/sirupsen/logrus"
+	"github.com/paulstuart/satellite/csp"
 )
 
 //Used Doc
 //https://cloud.google.com/compute/docs/storing-retrieving-metadata#endpoints
 
-// IdentifyGoogle stuct holds the logger
-type IdentifyGoogle struct {
-	Log logrus.FieldLogger
+// Identify tries to identify Google provider by reading the /sys/class/dmi/id/product_name file
+func IdentifyGoogle() (string, error) {
+	if fileContains(GoogleFile, GoogleContents) {
+		return csp.Google, nil
+	}
+	return "", nil
 }
 
-// Identify tries to identify Google provider by reading the /sys/class/dmi/id/product_name file
-func (a *IdentifyGoogle) Identify() (string, error) {
-	data, err := os.ReadFile("/sys/class/dmi/id/product_name")
-	if err != nil {
-		a.Log.Errorf("Something happened during reading a file: %s", err.Error())
-		return defaults.Unknown, err
-	}
-	if strings.Contains(string(data), "Google") {
-		return defaults.Google, nil
-	}
-	return defaults.Unknown, nil
-}
+const (
+	GoogleURL      = "http://metadata.google.internal/computeMetadata/v1/instance/tags"
+	GoogleFile     = "/sys/class/dmi/id/product_name"
+	GoogleContents = "Google"
+)
 
 // IdentifyGoogleViaMetadataServer tries to identify Google via metadata server
-func IdentifyGoogleViaMetadataServer(detected chan<- string, log logrus.FieldLogger) {
-	req, err := http.NewRequest("GET", "http://metadata.google.internal/computeMetadata/v1/instance/tags", nil)
+func IdentifyGoogleViaMetadataServer() (string, error) {
+	headers := map[string]string{"Metadata-Flavor": "Google"}
+	resp, err := httpGet(GoogleURL, headers)
+
 	if err != nil {
-		log.Errorf("Could not create a proper http request %s", err.Error())
-		detected <- defaults.Unknown
-		return
-	}
-	req.Header.Set("Metadata-Flavor", "Google")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Errorf("Something happened during the request %s", err.Error())
-		detected <- defaults.Unknown
-		return
+		return "", fmt.Errorf("something happened during the request %w", err)
 	}
 	if resp.StatusCode == http.StatusOK {
-		detected <- defaults.Google
-	} else {
-		log.Errorf("Something happened during the request with status %s", resp.Status)
-		detected <- defaults.Unknown
-		return
+		return csp.Google, nil
 	}
+	return "", fmt.Errorf("something happened during the request with status %s", resp.Status)
 }

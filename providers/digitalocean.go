@@ -1,15 +1,6 @@
 package providers
 
-import (
-	"encoding/json"
-	"io"
-	"net/http"
-	"os"
-	"strings"
-
-	"github.com/banzaicloud/satellite/defaults"
-	"github.com/sirupsen/logrus"
-)
+import "github.com/paulstuart/satellite/csp"
 
 //Used docs
 // https://developers.digitalocean.com/documentation/metadata/#metadata-in-json
@@ -18,59 +9,29 @@ type digitalOceanMetadataResponse struct {
 	DropletID int `json:"droplet_id"`
 }
 
-// IdentifyDigitalOcean struct holds the logger
-type IdentifyDigitalOcean struct {
-	Log logrus.FieldLogger
+func (do *digitalOceanMetadataResponse) IsCSP() string {
+	if do.DropletID > 0 {
+		return csp.DigitalOcean
+	}
+	return ""
 }
 
+const (
+	DigitalOceanURL      = "http://169.254.169.254/metadata/v1.json"
+	DigitalOceanFile     = "/sys/class/dmi/id/sys_vendor"
+	DigitalOceanContents = "DigitalOcean"
+)
+
 // Identify tries to identify DigitalOcean provider by reading the /sys/class/dmi/id/sys_vendor file
-func (a *IdentifyDigitalOcean) Identify() (string, error) {
-	data, err := os.ReadFile("/sys/class/dmi/id/sys_vendor")
-	if err != nil {
-		a.Log.Errorf("Something happened during reading a file: %s", err.Error())
-		return defaults.Unknown, err
+func IdentifyDigitalOcean() (string, error) {
+	if fileContains(DigitalOceanFile, DigitalOceanContents) {
+		return csp.DigitalOcean, nil
 	}
-	if strings.Contains(string(data), "DigitalOcean") {
-		return defaults.DigitalOcean, nil
-	}
-	return defaults.Unknown, nil
+	return "", nil
 }
 
 // IdentifyDigitalOceanViaMetadataServer tries to identify DigitalOcean via metadata server
-func IdentifyDigitalOceanViaMetadataServer(detected chan<- string, log logrus.FieldLogger) {
-	r := digitalOceanMetadataResponse{}
-	req, err := http.NewRequest("GET", "http://169.254.169.254/metadata/v1.json", nil)
-	if err != nil {
-		log.Errorf("could not create a proper http request %s", err.Error())
-		detected <- defaults.Unknown
-		return
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Errorf("Something happened during the request %s", err.Error())
-		detected <- defaults.Unknown
-		return
-	}
-	if resp.StatusCode == http.StatusOK {
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Errorf("Something happened during parsing the response body %s", err.Error())
-			detected <- defaults.Unknown
-			return
-		}
-		err = json.Unmarshal(body, &r)
-		if err != nil {
-			log.Errorf("Something happened during unmarshalling the response body %s", err.Error())
-			detected <- defaults.Unknown
-			return
-		}
-		if r.DropletID > 0 {
-			detected <- defaults.DigitalOcean
-		}
-	} else {
-		log.Errorf("Something happened during the request with status %s", resp.Status)
-		detected <- defaults.Unknown
-		return
-	}
+func IdentifyDigitalOceanViaMetadataServer() (string, error) {
+	var do digitalOceanMetadataResponse
+	return IdentifyViaMetadataServer(DigitalOceanURL, &do)
 }

@@ -1,14 +1,11 @@
 package providers
 
 import (
-	"encoding/json"
-	"io"
-	"net/http"
+	"fmt"
 	"os"
 	"strings"
 
-	"github.com/banzaicloud/satellite/defaults"
-	"github.com/sirupsen/logrus"
+	"github.com/paulstuart/satellite/csp"
 )
 
 // Used docs
@@ -20,62 +17,30 @@ type instanceIdentityResponse struct {
 	InstanceID string `json:"instanceId"`
 }
 
-// IdentifyAmazon stuct holds the logger
-type IdentifyAmazon struct {
-	Log logrus.FieldLogger
+func (r *instanceIdentityResponse) IsCSP() string {
+	if strings.HasPrefix(r.ImageID, "ami-") &&
+		strings.HasPrefix(r.InstanceID, "i-") {
+		return csp.Amazon
+	}
+	return ""
 }
 
 // Identify tries to identify Amazon provider by reading the /sys/class/dmi/id/product_version file
-func (a *IdentifyAmazon) Identify() (string, error) {
+func IdentifyAmazon() (string, error) {
 	data, err := os.ReadFile("/sys/class/dmi/id/product_version")
 	if err != nil {
-		a.Log.Errorf("Something happened during reading a file: %s", err.Error())
-		return defaults.Unknown, err
+		return "", fmt.Errorf("something happened during reading a file: %w", err)
 	}
 	if strings.Contains(string(data), "amazon") {
-		return defaults.Amazon, nil
+		return csp.Amazon, nil
 	}
-	return defaults.Unknown, nil
+	return "", nil
 }
 
-// IdentifyAmazonViaMetadataServer tries to identify Amazon via metadata server
-func IdentifyAmazonViaMetadataServer(detected chan<- string, log logrus.FieldLogger) {
-	r := instanceIdentityResponse{}
-	req, err := http.NewRequest("GET", "http://169.254.169.254/latest/dynamic/instance-identity/document", nil)
-	if err != nil {
-		log.Errorf("could not create a new amazon request %s", err.Error())
-		detected <- defaults.Unknown
-		return
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Errorf("Something happened during the request %s", err.Error())
-		detected <- defaults.Unknown
-		return
-	}
-	if resp.StatusCode == http.StatusOK {
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Errorf("Something happened during parsing the response body %s", err.Error())
-			detected <- defaults.Unknown
-			return
-		}
-		err = json.Unmarshal(body, &r)
-		if err != nil {
-			log.Errorf("Something happened during unmarshalling the response body %s", err.Error())
-			detected <- defaults.Unknown
-			return
-		}
-		if strings.HasPrefix(r.ImageID, "ami-") &&
-			strings.HasPrefix(r.InstanceID, "i-") {
-			detected <- defaults.Amazon
-			return
-		}
-	} else {
-		log.Errorf("Something happened during the request with status %s", resp.Status)
-		detected <- defaults.Unknown
-		return
-	}
+const AmazonURL = "http://169.254.169.254/latest/dynamic/instance-identity/document"
 
+// IdentifyAmazonViaMetadataServer tries to identify Amazon via metadata server
+func IdentifyAmazonViaMetadataServer() (string, error) {
+	var r instanceIdentityResponse
+	return IdentifyViaMetadataServer(AmazonURL, &r)
 }
