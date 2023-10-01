@@ -5,6 +5,12 @@ import "github.com/paulstuart/satellite/csp"
 //Used docs
 // https://developers.digitalocean.com/documentation/metadata/#metadata-in-json
 
+const (
+	DigitalOceanURL      = "http://169.254.169.254/metadata/v1.json"
+	DigitalOceanFile     = "/sys/class/dmi/id/sys_vendor"
+	DigitalOceanContents = "DigitalOcean"
+)
+
 type digitalOceanMetadataResponse struct {
 	DropletID int `json:"droplet_id"`
 }
@@ -15,12 +21,6 @@ func (do *digitalOceanMetadataResponse) IsCSP() string {
 	}
 	return ""
 }
-
-const (
-	DigitalOceanURL      = "http://169.254.169.254/metadata/v1.json"
-	DigitalOceanFile     = "/sys/class/dmi/id/sys_vendor"
-	DigitalOceanContents = "DigitalOcean"
-)
 
 // Identify tries to identify DigitalOcean provider by reading the /sys/class/dmi/id/sys_vendor file
 func IdentifyDigitalOcean() (string, error) {

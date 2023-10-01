@@ -1,8 +1,6 @@
 package providers
 
 import (
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/paulstuart/satellite/csp"
@@ -11,6 +9,12 @@ import (
 // Used docs
 // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
 // https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html
+
+const (
+	AmazonURL      = "http://169.254.169.254/latest/dynamic/instance-identity/document"
+	AmazonFile     = "/sys/class/dmi/id/product_version"
+	AmazonContents = "amazon"
+)
 
 type instanceIdentityResponse struct {
 	ImageID    string `json:"imageId"`
@@ -27,17 +31,11 @@ func (r *instanceIdentityResponse) IsCSP() string {
 
 // Identify tries to identify Amazon provider by reading the /sys/class/dmi/id/product_version file
 func IdentifyAmazon() (string, error) {
-	data, err := os.ReadFile("/sys/class/dmi/id/product_version")
-	if err != nil {
-		return "", fmt.Errorf("something happened during reading a file: %w", err)
-	}
-	if strings.Contains(string(data), "amazon") {
+	if fileContains(AmazonFile, AmazonContents) {
 		return csp.Amazon, nil
 	}
 	return "", nil
 }
-
-const AmazonURL = "http://169.254.169.254/latest/dynamic/instance-identity/document"
 
 // IdentifyAmazonViaMetadataServer tries to identify Amazon via metadata server
 func IdentifyAmazonViaMetadataServer() (string, error) {

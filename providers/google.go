@@ -10,6 +10,12 @@ import (
 //Used Doc
 //https://cloud.google.com/compute/docs/storing-retrieving-metadata#endpoints
 
+const (
+	GoogleURL      = "http://metadata.google.internal/computeMetadata/v1/instance/tags"
+	GoogleFile     = "/sys/class/dmi/id/product_name"
+	GoogleContents = "Google"
+)
+
 // Identify tries to identify Google provider by reading the /sys/class/dmi/id/product_name file
 func IdentifyGoogle() (string, error) {
 	if fileContains(GoogleFile, GoogleContents) {
@@ -17,12 +23,6 @@ func IdentifyGoogle() (string, error) {
 	}
 	return "", nil
 }
-
-const (
-	GoogleURL      = "http://metadata.google.internal/computeMetadata/v1/instance/tags"
-	GoogleFile     = "/sys/class/dmi/id/product_name"
-	GoogleContents = "Google"
-)
 
 // IdentifyGoogleViaMetadataServer tries to identify Google via metadata server
 func IdentifyGoogleViaMetadataServer() (string, error) {

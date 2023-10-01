@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/paulstuart/satellite/csp"
@@ -13,19 +12,19 @@ import (
 //Used docs
 //https://www.alibabacloud.com/help/faq-detail/49122.htm
 
+const (
+	AlibabaURL      = "http://100.100.100.200/latest/meta-data/instance/instance-type"
+	AlibabaFile     = "/sys/class/dmi/id/product_name"
+	AlibabaContents = "Alibaba Cloud"
+)
+
 // Identify tries to identify Alibaba provider by reading the /sys/class/dmi/id/product_name file
 func IdentifyAlibaba() (string, error) {
-	data, err := os.ReadFile("/sys/class/dmi/id/product_name")
-	if err != nil {
-		return "", fmt.Errorf("something happened during reading a file: %s", err.Error())
-	}
-	if strings.Contains(string(data), "Alibaba Cloud") {
+	if fileContains(AlibabaFile, AlibabaContents) {
 		return csp.Alibaba, nil
 	}
 	return "", nil
 }
-
-const AlibabaURL = "http://100.100.100.200/latest/meta-data/instance/instance-type"
 
 // IdentifyAlibabaViaMetadataServer tries to identify Alibaba via metadata server
 func IdentifyAlibabaViaMetadataServer() (string, error) {

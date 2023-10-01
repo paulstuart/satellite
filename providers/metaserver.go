@@ -17,17 +17,12 @@ type CSP interface {
 }
 
 var (
-	dialTimeout = time.Second * 2
+	Timeout = time.Second * 2
+	logger  = log.Default()
 )
 
-func XhttpReq(url string) (*http.Request, error) {
-	ctx, _ := context.WithTimeout(context.Background(), dialTimeout)
-
-	return http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-}
-
 func httpGet(url string, headers map[string]string) (*http.Response, error) {
-	ctx, cncl := context.WithTimeout(context.Background(), dialTimeout)
+	ctx, cncl := context.WithTimeout(context.Background(), Timeout)
 	defer cncl()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
@@ -40,32 +35,9 @@ func httpGet(url string, headers map[string]string) (*http.Response, error) {
 	}
 
 	return http.DefaultClient.Do(req)
-
-	// transport := http.Transport{
-	// 	Dial: dialTimeout,
-	// }
-
-	// client := http.Client{
-	// 	Transport: &transport,
-	// }
-
-	// return client.Get(url)
-	// req, err := http.NewRequest("GET", url, nil)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("could not create a proper http request %s", err.Error())
-	// }
-	// return http.DefaultClient.Do(req)
 }
 
 func IdentifyViaMetadataServer(url string, c CSP) (string, error) {
-	// req, err := http.NewRequest("GET", url, nil)
-	// if err != nil {
-	// 	return "", fmt.Errorf("could not create a proper http request %s", err.Error())
-	// }
-	// resp, err := http.DefaultClient.Do(req)
-	// if err != nil {
-	// 	return "", fmt.Errorf("Something happened during the request %w", err)
-	// }
 	resp, err := httpGet(url, nil)
 	if err != nil {
 		return "", fmt.Errorf("get failed for %q: %w", url, err)
